@@ -1,0 +1,5 @@
+-e git+git://github.com/praekelt/vumi.git@3905b3e9b18277f66478621b332dbff9700337b4#egg=vumi
+python-subunit
+junitxml
+pep8
+coverage
