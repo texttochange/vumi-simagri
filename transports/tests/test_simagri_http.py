@@ -7,6 +7,7 @@ from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from vumi.tests.utils import MockHttpServer
 from vumi.transports.tests.test_base import TransportTestCase
 from vumi.message import TransportMessage
+from vumi.utils import http_request_full
 
 from transports.simagri_http import SimagriHttpTransport
 
@@ -29,7 +30,7 @@ class SimagriTransportTestCase(TransportTestCase):
         
         self.config = {
             'transport_name': self.transport_name,
-            'receive_path': '/sendsms',
+            'receive_path': 'sendsms',
             'receive_port': 9998,
             'outbound_url': self.mock_simagri_sms.url
             }
@@ -44,13 +45,6 @@ class SimagriTransportTestCase(TransportTestCase):
     def handle_request(self, request):
         self.simagri_sms_calls.put(request)
         return ''
-
-    #def make_resource_worker(self, msg, code=http.OK, send_id=None):
-        #w = get_stubbed_worker(TestResourceWorker, {})
-        #w.set_resources([
-            #(self.send_path, TestResource, (msg, code, send_id))])
-        #self._workers.append(w)
-        #return w.startWorker()
 
     @inlineCallbacks
     def test_sending_sms(self):
@@ -67,24 +61,31 @@ class SimagriTransportTestCase(TransportTestCase):
                                         sent_message_id='1'),
                          smsg)
 
+    def mkurl_raw(self, **params):
+        return '%s%s?%s' % (
+            self.transport_url,
+            self.config['receive_path'],
+            urlencode(params))    
+
+    def mkurl(self, content, to_addr, from_addr, **kw):
+        params = {
+            'message': content,
+            'to_addr': to_addr,
+            'from_addr': from_addr,
+        }
+        params.update(kw)
+        return self.mkurl_raw(**params)
+
+    @inlineCallbacks
     def test_receiving_sms(self):
-        url = ("http://localhost:%s/%s?message?message=%s&to_addr=%s&from_addr=%s" % 
-               (self.config['receive_port'],
-                self.config['receive_path'],
-                'Hello',
-                '+2261',
-                '2323'))
+        url = self.mkurl('Hello', '+2261', '2323')
         response = yield http_request_full(url, method='GET')
-        [smsg] = self.get_dispatched('cm.inbound')
+        [smsg] = self.get_dispatched_messages()
 
         self.assertEqual(response.code, http.OK)
-        msg = TransportMessage.from_json(smsg.body)
-        self.assertEqual('Hello',
-                         msg['content'])
-        self.assertEqual('+2261',
-                         msg['to_addr'])
-        self.assertEqual('2323',
-                         msg['from_addr'])
+        self.assertEqual('Hello', smsg['content'])
+        self.assertEqual('+2261', smsg['to_addr'])
+        self.assertEqual('2323', smsg['from_addr'])
 
 
 class TestResource(Resource):

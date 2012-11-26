@@ -24,83 +24,61 @@ from vumi.utils import http_request_full, normalize_msisdn
 ##To receive sms we use the YO Interface to forward the sms
 class CmYoTransport(Transport):
 
-    def mkres(self, cls, publish_func, path_key):
-        resource = cls(self.config, publish_func)
-        self._resources.append(resource)
-        return (resource, self.config['receive_path'])
+    #def mkres(self, cls, publish_func, path_key):
+        #resource = cls(self.config, publish_func)
+        #self._resources.append(resource)
+        #return (resource, self.config['receive_path'])
 
     @inlineCallbacks
     def setup_transport(self):
-        self._resources = []
         log.msg("Setup yo transport %s" % self.config)
-        resources = [self.mkres(YoReceiveSMSResource,
-                                self.publish_message,
-                                self.config['receive_path'])]
-        self.receipt_resource = yield self.start_web_resources(
-            resources,
+        self._resources = []
+        self.web_resource = yield self.start_web_resources(
+            [
+                (YoReceiveSMSResource(self), self.config['receive_path'])
+            ],
             self.config['receive_port'])
+
+    @inlineCallbacks
+    def teardown_transport(self):
+        yield seld.web_resource.loseConnection()
+
+    def get_transport_url(self, suffix=''):
+        addr = self.web_resource.getHost()
+        return "http://%s:%s/%s" % (addr.host, addr.port, suffix.lstrip('/'))
 
     @inlineCallbacks
     def handle_outbound_message(self, message):
         log.msg("Outbound message to be processed %s" % repr(message))
         try:
             cmparser = CMXMLParser()
+            params = cmparser.build({
+                'customer_id': self.config['customer_id'],
+                'login': self.config['login'],
+                'password': self.config['password'],
+                'from_addr': self.config['default_origin'],
+                'to_addr': message['to_addr'],
+                'content': message['content']})
+            log.msg('Hitting %s with %s' % (self.config['outbound_url'], urlencode(params)))
             response = yield http_request_full(
                 self.config['url'],
-                cmparser.build({
-                    'customer_id': self.config['customer_id'],
-                    'login': self.config['login'],
-                    'password': self.config['password'],
-                    'from_addr': self.config['default_origin'],
-                    'to_addr': message['to_addr'],
-                    'content': message['content']}),
+                params,
                 {'User-Agent': ['Vumi CM YO Transport'],
                  'Content-Type': ['application/json;charset=UTF-8'], },
-                'POST')
+                method='POST')
+            log.msg("Response: (%s) %r" % (response.code, response.delivered_body))
+            content = response.delivered_body.strip()            
 
-            if response.code != 200:
-                log.msg("Http Error %s: %s"
-                        % (response.code, response.delivered_body))
-                yield self.publish_delivery_report(
-                    user_message_id=message['message_id'],
-                    delivery_status='failed',
-                    failure_level='http',
-                    failure_code=response.code,
-                    failure_reason=response.delivered_body)
-                return
-
-            if response.delivered_body:
-                log.msg("Cm Error: %s" % (response.delivered_body))
-                yield self.publish_delivery_report(
-                    user_message_id=message['message_id'],
-                    delivery_status='failed',
-                    failure_level='service',
-                    failure_code=0,
-                    failure_reason=response.delivered_body)
-                return
-
-            yield self.publish_delivery_report(
-                user_message_id=message['message_id'],
-                delivery_status='delivered',
-                to_addr=message['to_addr'])
+            if response.code != 200 or response.delivered_body:
+                error = self.KNOWN_ERROR_RESPONSE_CODES.get(content,
+                                                            'Unknown response code: %s' % (content,))
+                yield self.publish_nack(message['message_id'], error)
+                return    
+            yield self.publish_ack(user_message_id=message['message_id'],
+                                   sent_message_id=message['message_id'])
         except Exception as ex:
             log.msg("Unexpected error %s" % repr(ex))
-
-    def stopWorker(self):
-        log.msg("stop yo transport")
-        if hasattr(self, 'receipt_resource'):
-            return self.receipt_resource.stopListening()
-
-
-class YoReceiveSMSResource(Resource):
-    isLeaf = True
-
-    def __init__(self, config, publish_func):
-        log.msg("Init ReceiveSMSResource %s" % (config))
-        self.config = config
-        self.publish_func = publish_func
-        self.transport_name = self.config['transport_name']
-
+            
     def phone_format_from_yo(self, phone):
         regex = re.compile('^[(00)(\+)]')
         regex_single = re.compile('^0')
@@ -109,27 +87,34 @@ class YoReceiveSMSResource(Resource):
         return ('+%s' % phone)
 
     @inlineCallbacks
-    def do_render(self, request):
-        log.msg('got hit with %s' % request.args)
-        request.setResponseCode(http.OK)
-        request.setHeader('Content-Type', 'text/plain')
-        try:
-            yield self.publish_func(
-                transport_name=self.transport_name,
-                transport_type='sms',
-                to_addr=(request.args['code'][0] if request.args['code'][0]!='' else self.config['default_origin']),
-                from_addr=self.phone_format_from_yo(request.args['sender'][0]),
-                content=request.args['message'][0],
-                transport_metadata={}
-            )
-        except Exception, e:
-            request.setResponseCode(http.INTERNAL_SERVER_ERROR)
-            log.msg("Error processing the request: %s" % (request,))
-        request.finish()
+    def handle_raw_inbound_message(request):
+        yield self.publish_func(
+            transport_name=self.transport_name,
+            transport_type='sms',
+            to_addr=(request.args['code'][0] if request.args['code'][0]!='' else self.config['default_origin']),
+            from_addr=self.phone_format_from_yo(request.args['sender'][0]),
+            content=request.args['message'][0],
+            transport_metadata={})
 
-    def render(self, request):
-        self.do_render(request)
-        return NOT_DONE_YET
+
+class YoReceiveSMSResource(Resource):
+    isLeaf = True
+
+    def __init__(self, transport):
+        self.transport = transport
+        Resource.__init__(self)
+
+    def render_GET(self, request):
+        log.msg('got hit with %s' % request.args)
+        try:
+            self.transport.handle_raw_inbound_message(request)
+            request.setResponseCode(http.OK)
+            request.setHeader('Content-Type', 'text/plain')           
+        except:
+            request.setResponseCode(http.INTERNAL_SERVER_ERROR)
+            request.setHeader('Content-Type', 'text/plain')                        
+            log.msg("Error processing the request: %s" % (request,))
+        return ''
 
 
 class CMXMLParser():
