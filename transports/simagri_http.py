@@ -1,8 +1,11 @@
+from urllib import urlencode
+
 from twisted.python import log
 from twisted.internet.defer import inlineCallbacks
 from twisted.web.resource import Resource
 
 from vumi.transports.base import Transport
+from vumi.utils import http_request_full
 
 class SimagriHttpTransport(Transport):
     
@@ -16,6 +19,11 @@ class SimagriHttpTransport(Transport):
             ],
             self.config['receive_port'])
     
+
+    def get_transport_url(self, suffix=''):
+        addr = self.web_resource.getHost()
+        return "http://%s:%s/%s" % (addr.host, addr.port, suffix.lstrip('/'))
+    
     @inlineCallbacks
     def teardown_transport(self):
         yield self.web_resource.loseConnection()    
@@ -28,20 +36,22 @@ class SimagriHttpTransport(Transport):
                 'message': message['content'],
                 'from_addr': message['from_addr']
             }
-            log.msg('Hitting %s with %s' % (self.config['url'], urlencode(params)))
-    
+            
+            log.msg('Hitting %s with %s' % (self.config['outbound_url'], urlencode(params)))
             response = yield http_request_full(
-                "%s?%s" % (self.config['url'], urlencode(params)),
-                "",
-                {'User-Agent': ['Vumi Simagri Transport'],
-                 'Content-Type': ['application/json;charset=UTF-8'], },
-                'GET')
-    
+                "%s?%s" % (self.config['outbound_url'], urlencode(params)),
+                '',
+                method='GET')
+            log.msg("Response: (%s) %r" % (response.code, response.delivered_body))
+            content = response.delivered_body.strip()            
+            
             if response.code == 200:
-                self.publish_ack(user_message_id=message['message_id'],
+                yield self.publish_ack(user_message_id=message['message_id'],
                                  sent_message_id=message['message_id'])
-                return
-            log.msg("Http Error %s: %s" % (response.code, response.delivered_body))
+            else:
+                error = self.KNOWN_ERROR_RESPONSE_CODES.get(content,
+                                                            'Unknown response code: %s' % (content,))
+                yield self.publish_nack(message['message_id'], error)
         except Exception as ex:
             log.msg("Unexpected error %s" % repr(ex)) 
     

@@ -1,3 +1,5 @@
+from urllib import urlencode
+
 from twisted.web import http
 from twisted.web.resource import Resource
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
@@ -27,11 +29,17 @@ class SimagriTransportTestCase(TransportTestCase):
         
         self.config = {
             'transport_name': self.transport_name,
-            'url': 'http://localhost:%s%s' % (self.send_port, self.send_path),
             'receive_path': '/sendsms',
-            'receive_port': 9998
+            'receive_port': 9998,
+            'outbound_url': self.mock_simagri_sms.url
             }
-        self.worker = yield self.get_transport(self.config)
+        self.transport = yield self.get_transport(self.config)
+        self.transport_url = self.transport.get_transport_url()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self.mock_simagri_sms.stop()
+        yield super(SimagriTransportTestCase, self).tearDown()
 
     def handle_request(self, request):
         self.simagri_sms_calls.put(request)
@@ -46,24 +54,18 @@ class SimagriTransportTestCase(TransportTestCase):
 
     @inlineCallbacks
     def test_sending_sms(self):
-        self.make_resource_worker("")
-        yield self.dispatch(self.mkmsg_out("+2261"))
+        yield self.dispatch(self.mkmsg_out(from_addr="+2261"))
         req = yield self.simagri_sms_calls.get()
         self.assertEqual(req.path, '/')
         self.assertEqual(req.method, 'GET')
         self.assertEqual({
-            'username': ['other-user'],
-            'password': ['other-pass'],
-            'source': ['9292'],
-            'destination': ['2371234567'],
+            'from_addr': ['+2261'],
             'message': ['hello world'],
             }, req.args)        
         [smsg] = self.get_dispatched_events()
-        self.assertEqual(self.mkmsg_ack(user_message_id=1),
-                         TransportMessage.from_json(smsg))
-
-    def test_sending_sms_failed(self):
-        pass
+        self.assertEqual(self.mkmsg_ack(user_message_id='1',
+                                        sent_message_id='1'),
+                         smsg)
 
     def test_receiving_sms(self):
         url = ("http://localhost:%s/%s?message?message=%s&to_addr=%s&from_addr=%s" % 
@@ -83,9 +85,6 @@ class SimagriTransportTestCase(TransportTestCase):
                          msg['to_addr'])
         self.assertEqual('2323',
                          msg['from_addr'])
-
-    def test_receiving_sms_fail(self):
-        pass
 
 
 class TestResource(Resource):
