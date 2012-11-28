@@ -5,6 +5,7 @@ from urllib import urlencode
 from twisted.web import http
 from twisted.web.resource import Resource
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
+from twisted.internet.base import DelayedCall
 
 from vumi.transports.tests.test_base import TransportTestCase
 from vumi.tests.utils import (get_stubbed_worker, TestResourceWorker,
@@ -29,6 +30,7 @@ class CmYoTransportTestCase(TransportTestCase):
 
     @inlineCallbacks
     def setUp(self):
+        DelayedCall.debug = True
         yield super(CmYoTransportTestCase, self).setUp()
         
         self.cmyo_sms_calls = DeferredQueue()
@@ -110,9 +112,9 @@ class CmYoTransportTestCase(TransportTestCase):
         self.assertEqual(req.path, '/')
         self.assertEqual(req.method, 'POST')
         [smsg] = self.get_dispatched_events()
-        self.assertEqual(self.mkmsg_delivery(user_message_id='1',
-                                             sent_message_id='1'),
-                         smsg)
+        
+        self.assertEqual('1', smsg['user_message_id'])
+        self.assertEqual('1', smsg['sent_message_id'])
 
     #@inlineCallbacks
     #def test_sending_sms_http_failure(self):

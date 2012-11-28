@@ -1,0 +1,6 @@
+transport_name: transport_simagri
+
+outbound_url: http://simagri.cloudfoundry.com/sendsms/index
+
+receive_path: sendsms
+receive_port: 2230
