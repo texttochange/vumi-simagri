@@ -1,3 +1,4 @@
+import sys
 from urllib import urlencode
 
 from twisted.python import log
@@ -7,8 +8,12 @@ from twisted.web import http
 
 from vumi.transports.base import Transport
 from vumi.utils import http_request_full
+from vumi.errors import MissingMessageField
+from vumi.log import log
 
 class SimagriHttpTransport(Transport):
+    
+    mandatory_message_fields = ['message', 'from_addr', 'to_addr']
     
     @inlineCallbacks
     def setup_transport(self):
@@ -61,14 +66,27 @@ class SimagriHttpTransport(Transport):
     
     @inlineCallbacks
     def handle_raw_inbound_message(self, request):
-        yield self.publish_message(
-            transport_name=self.transport_name,
-            transport_type='sms',
-            to_addr=self.phone_format_from_simagri(request.args['to_addr'][0]),
-            from_addr=request.args['from_addr'][0],
-            content=request.args['message'][0],
-            transport_metadata={})            
-    
+        try:
+            for field in self.mandatory_message_fields:
+                if not field in request.args:
+                    raise MissingMessageField(field)                       
+            yield self.publish_message(
+                transport_name=self.transport_name,
+                transport_type='sms',
+                to_addr=self.phone_format_from_simagri(request.args['to_addr'][0]),
+                from_addr=request.args['from_addr'][0],
+                content=request.args['message'][0],
+                transport_metadata={})
+            request.setResponseCode(http.OK)
+        except MissingMessageField as e:
+            request.setResponseCode(http.INTERNAL_SERVER_ERROR)
+            request.setHeader('Content-Type', 'text/plain')
+            request.write("MISSING FIELD: %s" % str(e))
+        except:
+            request.setResponseCode(http.INTERNAL_SERVER_ERROR)
+            request.setHeader('Content-Type', 'text/plain')
+            request.write("UNEXPECTED ERROR: %s" % sys.exc_info()[0])                    
+
 
 class SimagriReceiveSMSResource(Resource):
     isLeaf = True
@@ -79,12 +97,5 @@ class SimagriReceiveSMSResource(Resource):
 
     def render_GET(self, request):
         log.msg('got hit with %s' % request.args)
-        try:
-            self.transport.handle_raw_inbound_message(request)
-            request.setResponseCode(http.OK)
-            request.setHeader('Content-Type', 'text/plain')
-        except:
-            request.setResponseCode(http.INTERNAL_SERVER_ERROR)
-            request.setHeader('Content-Type', 'text/plain')            
-            log.msg("Error processing the request: %s" % (request,))                
+        self.transport.handle_raw_inbound_message(request)
         return ''

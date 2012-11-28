@@ -87,6 +87,16 @@ class SimagriTransportTestCase(TransportTestCase):
         self.assertEqual('+2261', smsg['to_addr'])
         self.assertEqual('2323', smsg['from_addr'])
 
+    @inlineCallbacks
+    def test_receiving_sms_fail(self):
+        params = {
+            'message': 'Hello',
+            'to_addr': '+2261',
+        }
+        url = self.mkurl_raw(**params)        
+        response = yield http_request_full(url, method='GET')
+        self.assertEqual(0, len(self.get_dispatched_messages()))
+        self.assertEqual(response.code, http.INTERNAL_SERVER_ERROR)
 
 class TestResource(Resource):
     isLeaf = True
