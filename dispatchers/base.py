@@ -14,15 +14,21 @@ class TranportToTransportToAddrMultiplexRouter(SimpleDispatchRouter):
     #Route all message to exposed name
     def dispatch_inbound_message(self, msg):
         log.msg("Dispatch inbound %r" % msg)
+        route_mapping = False
         try:
             names = self.config['route_mappings'][msg['transport_name']]
             for name in names:
+                log.msg("Dispatch to %s" % name)
                 self.dispatcher.publish_outbound_message(name, msg.copy())
+                route_mapping = True
         except:
             pass
+        if route_mapping:
+            return
         toaddr = msg['to_addr']
         for name, regex in self.toaddr_mappings:
             if regex.match(toaddr):
+                log.msg("Dispatch to %s" % name)                
                 self.dispatcher.publish_outbound_message(name, msg.copy())        
   
     #Do nothing as transport don't care about event

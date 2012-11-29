@@ -36,7 +36,7 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
     @inlineCallbacks
     def test_inbound_message_routing(self):
         #test from the tansports to the transport
-        msg = self.mkmsg_in(transport_name='transport_1')
+        msg = self.mkmsg_in(transport_name='transport_1', to_addr='1')
         yield self.dispatch(msg, 'transport_1.inbound')
         self.assert_messages('transport_muxed.outbound', [msg])
         self.assert_no_messages('transport_2.outbound', 'transport_2.inbound',
