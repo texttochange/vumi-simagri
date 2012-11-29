@@ -1,5 +1,6 @@
 import re
 
+from vumi.log import log
 from vumi.dispatchers import SimpleDispatchRouter
 
 
@@ -12,6 +13,7 @@ class TranportToTransportToAddrMultiplexRouter(SimpleDispatchRouter):
     
     #Route all message to exposed name
     def dispatch_inbound_message(self, msg):
+        log.msg("Dispatch inbound %r" % msg)
         try:
             names = self.config['route_mappings'][msg['transport_name']]
             for name in names:
