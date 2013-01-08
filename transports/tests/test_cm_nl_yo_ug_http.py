@@ -26,7 +26,7 @@ class CmYoTransportTestCase(TransportTestCase):
     send_port = 9999
 
     yo_incomming_template = ('%s%s?sender=0041791234567&'
-                             'code=%s&message=Hello+World')
+                             'code=%s&message=%s')
 
     @inlineCallbacks
     def setUp(self):
@@ -107,7 +107,8 @@ class CmYoTransportTestCase(TransportTestCase):
 
     @inlineCallbacks
     def test_sending_sms(self):
-        yield self.dispatch(self.mkmsg_out(to_addr='+41791234567'))
+        msg = self.mkmsg_out(to_addr='+41791234567', content=u'Message envoy\xe9')
+        yield self.dispatch(msg)
         req = yield self.cmyo_sms_calls.get()
         self.assertEqual(req.path, '/')
         self.assertEqual(req.method, 'POST')
@@ -149,7 +150,8 @@ class CmYoTransportTestCase(TransportTestCase):
         return self.yo_incomming_template % (
             self.transport_url,
             self.config['receive_path'],
-            '')     
+            '',
+            'setoffre+%23A%23BELG%3D10%2Ftete%2B300000%2Fpu%23+envoy%EF%BF%BD+depuis+SIMAgriMobile')
 
     @inlineCallbacks
     def test_receiving_sms(self):
@@ -158,7 +160,9 @@ class CmYoTransportTestCase(TransportTestCase):
         [smsg] = self.get_dispatched_messages()
 
         self.assertEqual(response.code, http.OK)
-        self.assertEqual('Hello World', smsg['content'])
+        self.assertEqual(
+            u'setoffre #A#BELG=10/tete+300000/pu# envoy\ufffd depuis SIMAgriMobile',
+            smsg['content'])
         self.assertEqual('+313455', smsg['to_addr'])
         self.assertEqual('+41791234567', smsg['from_addr'])
 
@@ -177,4 +181,5 @@ class TestResource(Resource):
 
     def render_POST(self, request):
         request.setResponseCode(self.code)
+        request.content.read()
         return self.message

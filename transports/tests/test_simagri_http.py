@@ -60,6 +60,22 @@ class SimagriTransportTestCase(TransportTestCase):
         self.assertEqual(self.mkmsg_ack(user_message_id='1',
                                         sent_message_id='1'),
                          smsg)
+    
+    @inlineCallbacks
+    def test_sending_sms_complex(self):
+        yield self.dispatch(self.mkmsg_out(
+            from_addr="+2261", content=u'setoffre #A#BELG=10/tete+300000/pu# envoy\ufffd depuis SIMAgriMobile'))
+        req = yield self.simagri_sms_calls.get()
+        self.assertEqual(req.path, '/')
+        self.assertEqual(req.method, 'GET')
+        self.assertEqual({
+            'from_addr': ['+2261'],
+            'message': ['setoffre #A#BELG=10/tete+300000/pu# envoy? depuis SIMAgriMobile'],
+            }, req.args)
+        [smsg] = self.get_dispatched_events()
+        self.assertEqual(self.mkmsg_ack(user_message_id='1',
+                                        sent_message_id='1'),
+                         smsg)    
 
     def mkurl_raw(self, **params):
         return '%s%s?%s' % (
@@ -78,12 +94,12 @@ class SimagriTransportTestCase(TransportTestCase):
 
     @inlineCallbacks
     def test_receiving_sms(self):
-        url = self.mkurl('Hello', '+2261', '2323')
+        url = self.mkurl('Hello envoy\xc3\xa9', '+2261', '2323')
         response = yield http_request_full(url, method='GET')
         [smsg] = self.get_dispatched_messages()
 
         self.assertEqual(response.code, http.OK)
-        self.assertEqual('Hello', smsg['content'])
+        self.assertEqual(u'Hello envoy\xe9', smsg['content'])
         self.assertEqual('+2261', smsg['to_addr'])
         self.assertEqual('2323', smsg['from_addr'])
 

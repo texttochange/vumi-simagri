@@ -39,7 +39,7 @@ class SimagriHttpTransport(Transport):
         log.msg("Outbound message to be processed %s" % repr(message))
         try:
             params = {
-                'message': message['content'],
+                'message': (message['content'] or '').encode("ascii", "replace"),
                 'from_addr': message['from_addr']
             }
             
