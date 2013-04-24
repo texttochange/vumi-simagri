@@ -11,6 +11,7 @@ from vumi.utils import http_request_full
 from vumi.errors import MissingMessageField
 from vumi.log import log
 
+
 class SimagriHttpTransport(Transport):
     
     mandatory_message_fields = ['message', 'from_addr', 'to_addr']
@@ -46,17 +47,18 @@ class SimagriHttpTransport(Transport):
             log.msg('Hitting %s with %s' % (self.config['outbound_url'], urlencode(params)))
             response = yield http_request_full(
                 "%s?%s" % (self.config['outbound_url'], urlencode(params)),
-                '',
                 method='GET')
             log.msg("Response: (%s) %r" % (response.code, response.delivered_body))
             content = response.delivered_body.strip()            
             
             if response.code == 200:
-                yield self.publish_ack(user_message_id=message['message_id'],
-                                 sent_message_id=message['message_id'])
+                yield self.publish_ack(
+                    user_message_id=message['message_id'],
+                    sent_message_id=message['message_id'])
             else:
-                error = self.KNOWN_ERROR_RESPONSE_CODES.get(content,
-                                                            'Unknown response code: %s' % (content,))
+                error = self.KNOWN_ERROR_RESPONSE_CODES.get(
+                    content,
+                    'Unknown response code: %s' % (content,))
                 yield self.publish_nack(message['message_id'], error)
         except Exception as ex:
             log.msg("Unexpected error %s" % repr(ex)) 
@@ -85,7 +87,7 @@ class SimagriHttpTransport(Transport):
         except:
             request.setResponseCode(http.INTERNAL_SERVER_ERROR)
             request.setHeader('Content-Type', 'text/plain')
-            request.write("UNEXPECTED ERROR: %s" % sys.exc_info()[0])                    
+            request.write("UNEXPECTED ERROR: %s" % sys.exc_info()[0])
 
 
 class SimagriReceiveSMSResource(Resource):
