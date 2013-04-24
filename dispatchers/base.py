@@ -29,7 +29,8 @@ class TranportToTransportToAddrMultiplexRouter(SimpleDispatchRouter):
         for name, regex in self.toaddr_mappings:
             if regex.match(toaddr):
                 log.msg("Dispatch to %s" % name)                
-                self.dispatcher.publish_outbound_message(name, msg.copy())        
+                self.dispatcher.publish_outbound_message(name, msg.copy())
+                return
   
     #Do nothing as transport don't care about event
     def dispatch_inbound_event(self, msg):

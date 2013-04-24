@@ -16,7 +16,8 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
                 "transport_1",
                 "transport_2",
                 "transport_3",
-                "transport_muxed"
+                "transport_muxed",
+                "transport_4",
                 ],
             "exposed_names": [],
             "router_class": "dispatchers.TranportToTransportToAddrMultiplexRouter",
@@ -24,7 +25,9 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
                 "^1": "transport_1",
                 "^2": "transport_2",
                 "^3": "transport_3",
+                "^.": "transport_4"
                 },
+            "toaddr_fallback" : "transport_4",
             "route_mappings": {
                 "transport_1": ["transport_muxed"],
                 "transport_2": ["transport_muxed"],
@@ -42,6 +45,7 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
         self.assert_no_messages('transport_2.outbound', 'transport_2.inbound',
                                 'transport_3.outbound', 'transport_3.inbound',
                                 'transport_1.outbound',
+                                'transport_4.outbound', 'transport_4.inbound',
                                 'transport_muxed.inbound')
 
     @inlineCallbacks
@@ -52,7 +56,8 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
         self.assert_messages('transport_1.outbound', [msg])
         self.assert_no_messages('transport_2.outbound', 'transport_2.inbound',
                                 'transport_3.outbound', 'transport_3.inbound',
-                                'transport_1.inbound')
+                                'transport_1.inbound',
+                                'transport_4.inbound', 'transport_4.outbound')
         
         self.clear_dispatched()
         msg = self.mkmsg_in(transport_name='transport_muxed', to_addr='234')
@@ -60,4 +65,17 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
         self.assert_messages('transport_2.outbound', [msg])
         self.assert_no_messages('transport_1.outbound', 'transport_1.inbound',
                                 'transport_3.outbound', 'transport_3.inbound',
-                                'transport_2.inbound')
+                                'transport_2.inbound', 
+                                'transport_4.inbound', 'transport_4.outbound')
+
+    @inlineCallbacks
+    def test_outbound_message_routing_catchall_rule(self):
+        #test from the tansport to the multex transport
+        msg = self.mkmsg_in(transport_name='transport_muxed', to_addr='423')
+        yield self.dispatch(msg, 'transport_muxed.inbound')
+        self.assert_messages('transport_4.outbound', [msg])
+        self.assert_no_messages('transport_2.outbound', 'transport_2.inbound',
+                                'transport_3.outbound', 'transport_3.inbound',
+                                'transport_1.inbound', 'transport_1.outbound',
+                                'transport_4.inbound')
+    
