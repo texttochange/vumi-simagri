@@ -9,7 +9,8 @@ class TranportToTransportToAddrMultiplexRouter(SimpleDispatchRouter):
     def setup_routing(self):
         self.toaddr_mappings = []
         for toaddr_pattern, name in self.config['toaddr_mappings'].items():
-            self.toaddr_mappings.append((name, re.compile(toaddr_pattern)))
+            toaddr_regex = '^%s%s' % (self.config['country_code'], toaddr_pattern)
+            self.toaddr_mappings.append((name, re.compile(toaddr_regex)))
     
     #Route all message to exposed name
     def dispatch_inbound_message(self, msg):
@@ -31,7 +32,9 @@ class TranportToTransportToAddrMultiplexRouter(SimpleDispatchRouter):
                 log.msg("Dispatch to %s" % name)                
                 self.dispatcher.publish_outbound_message(name, msg.copy())
                 return
-  
+        if self.config['toaddr_fallback'] is not None:
+            self.dispatcher.publish_outbound_message(self.config['toaddr_fallback'], msg.copy())
+        
     #Do nothing as transport don't care about event
     def dispatch_inbound_event(self, msg):
         pass
