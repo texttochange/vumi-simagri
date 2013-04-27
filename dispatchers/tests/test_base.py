@@ -23,9 +23,9 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
             "router_class": "dispatchers.TranportToTransportToAddrMultiplexRouter",
             "country_code": "226",
             "toaddr_mappings": {
-                "1[1-4]": "transport_1",
-                "2": "transport_2",
-                "3": "transport_3",
+                "transport_1": ["1[1-4]", "1[8-9]"],
+                "transport_2": ["2"],
+                "transport_3": ["3"],
                 },
             "toaddr_fallback" : "transport_4",
             "route_mappings": {
@@ -72,7 +72,7 @@ class TestTransportToTransportToAddrMultiplexRouter(TestTransportToTransportRout
     @inlineCallbacks
     def test_outbound_message_routing_catchall_rule(self):
         #test from the tansport to the multex transport
-        msg = self.mkmsg_in(transport_name='transport_muxed', to_addr='22618')
+        msg = self.mkmsg_in(transport_name='transport_muxed', to_addr='22616')
         yield self.dispatch(msg, 'transport_muxed.inbound')
         self.assert_messages('transport_4.outbound', [msg])
         self.assert_no_messages('transport_2.outbound', 'transport_2.inbound',
