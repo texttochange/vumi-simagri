@@ -1,5 +1,6 @@
 
-from smpp.pdu_builder import DeliverSMResp
+from twisted.internet.defer import inlineCallbacks
+from smpp.pdu_builder import PDU
 
 from vumi.transports.smpp.clientserver.client import unpacked_pdu_opts
 from vumi.transports.smpp.clientserver.client import EsmeTransceiver, EsmeTransceiverFactory
@@ -29,8 +30,8 @@ class EsmeDataTransceiverFactory(EsmeTransceiverFactory):
 
 class EsmeDataTransceiver(EsmeTransceiver):
 
-    ## Receiving sms
-    def handle_data_sm(self):
+    @inlineCallbacks
+    def handle_data_sm(self, pdu):
         if self.state not in ['BOUND_RX', 'BOUND_TRX']:
             log.err('WARNING: Received deliver_sm in wrong state: %s' % (
                 self.state))
@@ -41,7 +42,7 @@ class EsmeDataTransceiver(EsmeTransceiver):
         
         # TODO: Only ACK messages once we've processed them?
         sequence_number = pdu['header']['sequence_number']
-        pdu_resp = DeliverSMResp(sequence_number, **self.defaults)
+        pdu_resp = DataSMResp(sequence_number, **self.defaults)
         yield self.send_pdu(pdu_resp)
         
         pdu_params = pdu['body']['mandatory_parameters']
@@ -55,4 +56,20 @@ class EsmeDataTransceiver(EsmeTransceiver):
         delivery_report = self.config.delivery_report_re.search(
             pdu_params['short_message'] or '')
         
-        yield self._handle_deliver_sm_sms(pdu_params)        
+        yield self._handle_deliver_sm_sms(pdu_params)
+
+
+class DataSMResp(PDU):
+    def __init__(self,
+            sequence_number,
+            message_id = '',
+            command_status = 'ESME_ROK',
+            **kwargs):
+        super(DataSMResp, self).__init__(
+                'data_sm_resp',
+                command_status,
+                sequence_number,
+                **kwargs)
+        self.obj['body'] = {}
+        self.obj['body']['mandatory_parameters'] = {}
+        self.obj['body']['mandatory_parameters']['message_id'] = ''
