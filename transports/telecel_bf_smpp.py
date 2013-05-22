@@ -56,6 +56,12 @@ class EsmeDataTransceiver(EsmeTransceiver):
         delivery_report = self.config.delivery_report_re.search(
             pdu_params['short_message'] or '')
         
+        esm_class = pdu['body']['mandatory_parameters']['esm_class']
+        if not esm_class is 0:
+            log.err('WARNING: Received data_sm with esm_class: %s' % (
+                esm_class))
+            return
+        
         yield self._handle_deliver_sm_sms(pdu_params)
 
 
