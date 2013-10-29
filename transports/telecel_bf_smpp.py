@@ -2,8 +2,8 @@
 from twisted.internet.defer import inlineCallbacks
 from smpp.pdu_builder import PDU
 
-from vumi.transports.smpp.clientserver.client import unpacked_pdu_opts
-from vumi.transports.smpp.clientserver.client import EsmeTransceiver, EsmeTransceiverFactory
+from vumi.transports.smpp.clientserver.client import (
+    unpacked_pdu_opts, EsmeTransceiver, EsmeTransceiverFactory, EsmeCallbacks)
 from vumi.transports.smpp import SmppTransport
 
 from vumi import log
@@ -53,8 +53,8 @@ class EsmeDataTransceiver(EsmeTransceiver):
         if message_payload is not None:
             pdu_params['short_message'] = message_payload.decode('hex')
         
-        delivery_report = self.config.delivery_report_re.search(
-            pdu_params['short_message'] or '')
+        if 'short_message' not in pdu_params:
+            pdu_params['short_message'] = ''
         
         esm_class = pdu['body']['mandatory_parameters']['esm_class']
         if not esm_class is 0:
@@ -66,6 +66,7 @@ class EsmeDataTransceiver(EsmeTransceiver):
 
 
 class DataSMResp(PDU):
+    
     def __init__(self,
             sequence_number,
             message_id = '',
