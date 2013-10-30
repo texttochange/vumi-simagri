@@ -33,14 +33,17 @@ class TranportToTransportToAddrMultiplexRouter(SimpleDispatchRouter):
                 log.msg("Dispatch outbound %s to %s" % (toaddr, name))
                 self.dispatcher.publish_outbound_message(name, msg.copy())
                 return
-        if self.config['toaddr_fallback'] is not None:
+        if 'toaddr_fallback' in self.config and self.config['toaddr_fallback'] is not None:
             log.msg("Dispatch outbound %s to fallback" % toaddr)
             self.dispatcher.publish_outbound_message(self.config['toaddr_fallback'], msg.copy())
-        
+            return
+        log.err("No route for %s" % repr(msg))
+
     #Do nothing as transport don't care about event
     def dispatch_inbound_event(self, msg):
         pass
 
     #Route the message according to to_addr
     def dispatch_outbound_message(self, msg):
-        pass
+        log.err("No route for outbound %s" % repr(msg))
+
