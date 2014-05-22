@@ -1,3 +1,4 @@
+#encoding: utf-8
 from urllib import urlencode
 
 from twisted.web import http
@@ -10,6 +11,7 @@ from vumi.message import TransportMessage
 from vumi.utils import http_request_full
 
 from transports.simagri_http import SimagriHttpTransport
+
 
 class SimagriTransportTestCase(TransportTestCase):
     
@@ -64,13 +66,13 @@ class SimagriTransportTestCase(TransportTestCase):
     @inlineCallbacks
     def test_sending_sms_complex(self):
         yield self.dispatch(self.mkmsg_out(
-            from_addr="+2261", content=u'setoffre #A#BELG=10/tete+300000/pu# envoy\ufffd depuis SIMAgriMobile'))
+            from_addr="+2261", content=u'setoffre #A#BELG=10/tete+300000/pu# envoy\xe9 depuis SIMAgriMobile'))
         req = yield self.simagri_sms_calls.get()
         self.assertEqual(req.path, '/')
         self.assertEqual(req.method, 'GET')
         self.assertEqual({
             'from_addr': ['+2261'],
-            'message': ['setoffre #A#BELG=10/tete+300000/pu# envoy? depuis SIMAgriMobile'],
+            'message': ['setoffre #A#BELG=10/tete+300000/pu# envoy\xc3\xa9 depuis SIMAgriMobile'],
             }, req.args)
         [smsg] = self.get_dispatched_events()
         self.assertEqual(self.mkmsg_ack(user_message_id='1',
@@ -100,6 +102,17 @@ class SimagriTransportTestCase(TransportTestCase):
 
         self.assertEqual(response.code, http.OK)
         self.assertEqual(u'Hello envoy\xe9', smsg['content'])
+        self.assertEqual('+2261', smsg['to_addr'])
+        self.assertEqual('2323', smsg['from_addr'])
+
+    @inlineCallbacks
+    def test_receiving_sms_accent(self):
+        url = self.mkurl("Mr Zonga Salif veut vendre 11 t Maïs Blanc à 14909,09/t, Total HT 163999,99 contact:+22666486073 l'offre expire dans 11 jrs", '+2261', '2323')
+        response = yield http_request_full(url, method='GET')
+        [smsg] = self.get_dispatched_messages()
+
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(u"Mr Zonga Salif veut vendre 11 t Ma\xefs Blanc \xe0 14909,09/t, Total HT 163999,99 contact:+22666486073 l'offre expire dans 11 jrs", smsg['content'])
         self.assertEqual('+2261', smsg['to_addr'])
         self.assertEqual('2323', smsg['from_addr'])
 

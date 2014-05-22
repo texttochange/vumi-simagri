@@ -1,3 +1,5 @@
+#encoding=utf-8
+
 from urllib import urlencode
 
 from twisted.web import http
@@ -17,6 +19,7 @@ class AirtelBfTransportTestCase(TransportTestCase):
     transport_name = 'airtel'
     transport_type = 'sms'
     transport_class = AirtelBfHttpTransport
+
     
     send_path = '/sendsms/index'
     send_port = 9999
@@ -68,16 +71,17 @@ class AirtelBfTransportTestCase(TransportTestCase):
             self.mkmsg_ack(user_message_id='1',
                            sent_message_id='1'),
             smsg)
-    
+
+
     @inlineCallbacks
     def test_sending_sms_complex(self):
         yield self.dispatch(self.mkmsg_out(
-            from_addr="+2261", content=u'setoffre #A#BELG=10/tete+300000/pu# envoy\ufffd depuis SIMAgriMobile'))
+            from_addr="+2261", content=u'setoffre #A#BELG=10/tete+300000/pu# envoy\xe9 depuis SIMAgriMobile'))
         req = yield self.airtel_sms_calls.get()
         self.assertEqual(req.path, '/')
         self.assertEqual(req.method, 'GET')
         self.assertEqual(
-            'setoffre #A#BELG=10/tete+300000/pu# envoy? depuis SIMAgriMobile',
+            'setoffre #A#BELG=10/tete+300000/pu# envoyé depuis SIMAgriMobile',
             req.args['content'][0])
         [smsg] = self.get_dispatched_events()
         self.assertEqual(
@@ -101,6 +105,17 @@ class AirtelBfTransportTestCase(TransportTestCase):
     @inlineCallbacks
     def test_receiving_sms(self):
         url = self.mkurl('Hello envoy\xc3\xa9', '+2261')
+        response = yield http_request_full(url, method='GET')
+        [smsg] = self.get_dispatched_messages()
+
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(u'Hello envoy\xe9', smsg['content'])
+        self.assertEqual('3411', smsg['to_addr'])
+        self.assertEqual('+2261', smsg['from_addr'])
+
+    @inlineCallbacks
+    def test_receiving_sms_accent(self):
+        url = self.mkurl('Hello envoyé', '+2261')
         response = yield http_request_full(url, method='GET')
         [smsg] = self.get_dispatched_messages()
 

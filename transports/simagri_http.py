@@ -40,10 +40,9 @@ class SimagriHttpTransport(Transport):
         log.msg("Outbound message to be processed %s" % repr(message))
         try:
             params = {
-                'message': (message['content'] or '').encode("ascii", "replace"),
+                'message': (message['content'] or '').encode("utf8"),
                 'from_addr': message['from_addr']
             }
-            
             log.msg('Hitting %s with %s' % (self.config['outbound_url'], urlencode(params)))
             response = yield http_request_full(
                 "%s?%s" % (self.config['outbound_url'], urlencode(params)),

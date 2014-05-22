@@ -1,5 +1,6 @@
 import sys
 from urllib import urlencode
+from unidecode import unidecode
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.web.resource import Resource
@@ -39,12 +40,13 @@ class AirtelBfHttpTransport(Transport):
             params = {
                 'DA': message['from_addr'],
                 'SOA': message['to_addr'],
-                'content': (message['content'] or '').encode("ascii", "replace"),
+                'content': (message['content'] or '').encode("utf8"),
                 'u': self.config['login'],
                 'p': self.config['password']}
-            log.msg('Hitting %s with %s' % (self.config['outbound_url'], urlencode(params)))
+            encoded_params = urlencode(params)
+            log.msg('Hitting %s with %s' % (self.config['outbound_url'], encoded_params))
             response = yield http_request_full(
-                "%s?%s" % (self.config['outbound_url'], urlencode(params)),
+                "%s?%s" % (self.config['outbound_url'], encoded_params),
                 method='GET')
             log.msg("Response: (%s) %r" % (response.code, response.delivered_body))
             content = response.delivered_body.strip()            
