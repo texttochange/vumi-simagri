@@ -1,6 +1,5 @@
 import sys
 from urllib import urlencode
-from unidecode import unidecode
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.web.resource import Resource
