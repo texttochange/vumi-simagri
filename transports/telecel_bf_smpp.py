@@ -4,12 +4,12 @@ from smpp.pdu_builder import PDU
 
 from vumi.transports.smpp.clientserver.client import (
     unpacked_pdu_opts, EsmeTransceiver, EsmeTransceiverFactory, EsmeCallbacks)
-from vumi.transports.smpp import SmppTransport
+from enhanced_smpp import EnhancedSmppTransport
 
 from vumi import log
 
 
-class TelecelBfSmppTransport(SmppTransport):
+class TelecelBfSmppTransport(EnhancedSmppTransport):
 
     def make_factory(self):
         return EsmeDataTransceiverFactory(
