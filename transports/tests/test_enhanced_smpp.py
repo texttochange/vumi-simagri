@@ -9,7 +9,7 @@ from vumi.transports.smpp.clientserver.tests.utils import SmscTestServer
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import FakeRedis
 
-from transports.enhanced_smpp import EnhancedSmppTransport
+from transports.enhanced_smpp import EnhancedSmppTransport, EnhancedClientConfig
 
 
 class EnhancedSmppTransportTestCase(SmppTransportTestCase):
@@ -17,7 +17,7 @@ class EnhancedSmppTransportTestCase(SmppTransportTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        super(EnhancedSmppTransportTestCase, self).setUp()
+        super(SmppTransportTestCase, self).setUp()
         self.config = {
             "transport_name": self.transport_name,
             "system_id": "vumitest-vumitest-vumitest",
@@ -27,10 +27,9 @@ class EnhancedSmppTransportTestCase(SmppTransportTestCase):
             "smpp_bind_timeout": 12,
             "smpp_enquire_link_interval": 123,
             "third_party_id_expiry": 3600,
-            "submit_sm_encoding": "latin1",
-            "submit_sm_data_encoding": 3,
+            "data_coding": 3,
         }
-        self.clientConfig = ClientConfig.from_config(self.config)
+        self.clientConfig = EnhancedClientConfig.from_config(self.config)
         # hack a lot of transport setup
         self.transport = yield self.get_transport(self.config, start=False)
         self.transport.esme_client = None
@@ -39,3 +38,14 @@ class EnhancedSmppTransportTestCase(SmppTransportTestCase):
         self._make_esme()
         self.transport.esme_client = self.esme
         self.transport.esme_connected(self.esme)
+
+    @inlineCallbacks
+    def test_encoding_message(self):
+        # Sequence numbers are hardcoded, assuming we start fresh from 0.
+        message1 = self.mkmsg_out(u"message @ 1 \xe9", message_id='444')
+        yield self.dispatch(message1)
+
+        self.assert_sent_contents(["message @ 1 \xe9"])
+        pdu_contents = [p.obj['body']['mandatory_parameters']['data_coding']
+                        for p in self.esme.sent_pdus]
+        self.assertEqual([3], pdu_contents)        
