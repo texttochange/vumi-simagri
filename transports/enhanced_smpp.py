@@ -8,6 +8,7 @@ from vumi.message import TransportUserMessage
 class EnhancedSmppTransport(SmppTransport):
     
     codecs = {
+        0: 'utf-8',
         1: 'ascii',
         3: 'latin1',
         8: 'utf-16be',  # Actually UCS-2, but close enough.
