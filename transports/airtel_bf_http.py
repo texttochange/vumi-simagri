@@ -37,11 +37,13 @@ class AirtelBfHttpTransport(Transport):
         log.msg("Outbound message to be processed %s" % repr(message))
         try:
             params = {
-                'DA': message['from_addr'],
-                'SOA': message['to_addr'],
-                'content': (message['content'] or '').encode("utf8"),
-                'u': self.config['login'],
-                'p': self.config['password']}
+                'REQUESTTYPE': 'SMSSubmitReq',
+                'TYPE': '0',
+                'ORIGIN_ADDR': message['from_addr'],
+                'MOBILENO': message['to_addr'],
+                'MESSAGE': (message['content'] or '').encode("utf8"),
+                'USERNAME': self.config['login'],
+                'PASSWORD': self.config['password']}
             encoded_params = urlencode(params)
             log.msg('Hitting %s with %s' % (self.config['outbound_url'], encoded_params))
             response = yield http_request_full(

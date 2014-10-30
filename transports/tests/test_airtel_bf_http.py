@@ -60,11 +60,13 @@ class AirtelBfTransportTestCase(TransportTestCase):
         self.assertEqual(req.path, '/')
         self.assertEqual(req.method, 'GET')
         self.assertEqual({
-            'DA': ['9292'],
-            'SOA': ['+41791234567'],
-            'content': ['hello world'],
-            'u': ['texttochange'],
-            'p': ['password']
+            'REQUESTTYPE': ['SMSSubmitReq'],
+            'ORIGIN_ADDR': ['9292'],
+            'MOBILENO': ['+41791234567'],
+            'MESSAGE': ['hello world'],
+            'USERNAME': ['texttochange'],
+            'PASSWORD': ['password'],
+            'TYPE': ['0']
             }, req.args)        
         [smsg] = self.get_dispatched_events()
         self.assertEqual(
@@ -82,7 +84,7 @@ class AirtelBfTransportTestCase(TransportTestCase):
         self.assertEqual(req.method, 'GET')
         self.assertEqual(
             'setoffre #A#BELG=10/tete+300000/pu# envoyé depuis SIMAgriMobile',
-            req.args['content'][0])
+            req.args['MESSAGE'][0])
         [smsg] = self.get_dispatched_events()
         self.assertEqual(
             self.mkmsg_ack(user_message_id='1',
