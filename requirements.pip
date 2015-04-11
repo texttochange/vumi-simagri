@@ -13,6 +13,7 @@ python-smpp==0.1
 pytz==2012h
 riakasaurus>=1.0.6
 riak==1.5.1
+meld3
 #https://github.com/dustin/twitty-twister/tarball/master#egg=twittytwister-0.1.1
 
 Unidecode==0.04.14
