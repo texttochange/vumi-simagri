@@ -1,5 +1,5 @@
 dispatcher_name: dispatcher 
-router_class: dispatchers.TranportToTransportToAddrMultiplexRouter,
+router_class: dispatchers.TranportToTransportToAddrMultiplexRouter
 transport_names:
     - transport_simagri
     - transport_0031642500021
