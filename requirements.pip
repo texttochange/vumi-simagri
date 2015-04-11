@@ -14,6 +14,7 @@ riakasaurus>=1.0.6
 riak==1.5.1
 #https://github.com/dustin/twitty-twister/tarball/master#egg=twittytwister-0.1.1
 supervisor==3.1.3
+meld3==1.0.2
 Unidecode==0.04.14
 
 python-subunit
