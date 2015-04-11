@@ -1,4 +1,22 @@
--e git+git://github.com/praekelt/vumi.git@3905b3e9b18277f66478621b332dbff9700337b4#egg=vumi
+Twisted==12.2.0
+-e git://github.com/praekelt/vumi.git@3905b3e9b18277f66478621b332dbff9700337b4#egg=vumi-dev
+zope.interface==4.0.2
+txAMQP==0.6.1
+PyYAML==3.10
+supervisor==3.0b1
+pyOpenSSL==0.13
+python-ssmi==0.0.5
+wokkel==0.7.0
+redis==2.7.2
+txredis==2.3
+python-smpp==0.1
+pytz==2012h
+riakasaurus>=1.0.6
+riak==1.5.1
+https://github.com/dustin/twitty-twister/tarball/master#egg=twittytwister-0.1.1
+
+Unidecode==0.04.14
+
 python-subunit
 junitxml
 pep8
