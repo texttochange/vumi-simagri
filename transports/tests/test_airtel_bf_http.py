@@ -1,7 +1,4 @@
-
-
-#encoding=utf-8
-
+#encoding: utf-8
 from urllib import urlencode
 
 from twisted.web import http
