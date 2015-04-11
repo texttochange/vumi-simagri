@@ -1,10 +1,17 @@
 dispatcher_name: dispatcher 
 router_class: dispatchers.TranportToTransportToAddrMultiplexRouter
+country_code: '226'
 transport_names:
     - transport_simagri
-    - transport_0031642500021
+    - transport_operator_1
+    - transport_operator_2
 toaddr_mappings:
-    "^.": "transport_0031642500021"
+    transport_operator_1:
+        - "[1-5]"
+    transport_operator_2:
+        - "[6-9]"
 route_mappings:
-    "transport_0031642500021": 
+    transport_operator_1:
+        - transport_simagri
+    transport_operator_2:
         - transport_simagri

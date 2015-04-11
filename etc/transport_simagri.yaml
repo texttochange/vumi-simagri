@@ -1,0 +1,6 @@
+transport_name: transport_simagri
+
+outbound_url: http://localhost:4440
+
+receive_path: sendsms
+receive_port: 3330

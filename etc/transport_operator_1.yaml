@@ -1,0 +1,13 @@
+transport_name: transport_operator_1
+
+#Former http version
+receive_path: operator1
+receive_port: 3331
+outbound_url: http://localhost:4441
+login: login
+password: password
+
+default_shortcode: '3144'
+
+middleware: 
+    - mw: middlewares.content_encoding_middleware.ContentEncodingMiddleware
