@@ -11,3 +11,7 @@ default_shortcode: '3144'
 
 middleware: 
     - mw: middlewares.content_encoding_middleware.ContentEncodingMiddleware
+    - cw: middlewares.counter_middleware.CounterMiddleware
+
+cw:
+    op_name: operator_1
